@@ -1,7 +1,6 @@
 #include <Arduino.h>
 #include "DHT.h"
 #include <BluetoothSerial.h>
-#include <ArduinoJson.h>
 
 #define DHTPIN 15
 #define DHTTYPE DHT22
@@ -9,11 +8,12 @@
 BluetoothSerial BT;
 DHT dht(DHTPIN, DHTTYPE);
 
+// Variáveis de controle
 float tempAnterior = 0;
 float umidadeAnterior = 0;
 float fAnterior = 0;
 
-uint8_t endG[] = {0xF4, 0x65, 0x0B, 0x48, 0xA6, 0xCA};
+uint8_t endG[] = {0x78, 0x42, 0x1C, 0x6C, 0xA4, 0x16};
 void setup()
 {
   Serial.begin(9600);
@@ -40,10 +40,12 @@ void setup()
 
 void loop()
 {
+  // Leitura atual do DHT22
   float tempAtual = dht.readTemperature();
   float umidadeAtual = dht.readHumidity();
   float fAtual = dht.readTemperature(true);
 
+  // Verifica se leitura é válida
   if (isnan(tempAtual) || isnan(umidadeAtual) || isnan(fAtual))
   {
     Serial.println("Falha na leitura do DHT22!");
@@ -51,18 +53,17 @@ void loop()
     return;
   }
 
+  // Só envia se algum valor mudou
   if (tempAtual != tempAnterior || umidadeAtual != umidadeAnterior || fAtual != fAnterior)
   {
     // Monta uma ÚNICA STRING com os 3 valores
-   StaticJsonDocument<200> doc;
+    String mensagemEnviar = "TEMP_C:" + String(tempAtual, 2) +
+                            "|UMID:" + String(umidadeAtual, 2) +
+                            "|TEMP_F:" + String(fAtual, 2);
 
-    doc["C"] = tempAtual;
-    doc["F"] = fAtual;
-    doc["U"] = umidadeAtual;
+    mensagemEnviar.trim();
 
-    String mensagemEnviar;
-    serializeJson(doc, mensagemEnviar);
-
+    // Mostra no monitor serial
     Serial.println("Enviando via Bluetooth:");
     Serial.println(mensagemEnviar);
 
@@ -75,4 +76,5 @@ void loop()
     fAnterior = fAtual;
   }
 
+  delay(2000); // Intervalo entre leituras
 }
